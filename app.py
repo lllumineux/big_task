@@ -120,7 +120,8 @@ while running:
             elif event.key == pygame.K_F1:
                 change_l()
             # Работа с поисковой строкой
-            elif event.unicode in rus_alphabet and len(session_storage['text']) <= 50:
+            elif (event.unicode in rus_alphabet
+                  and len(session_storage['text']) <= 50):
                 session_storage['text'] += event.unicode
             elif event.key == 8 and len(session_storage['text']) > 0:
                 session_storage['text'] = session_storage['text'][:-1:]
