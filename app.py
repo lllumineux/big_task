@@ -19,7 +19,8 @@ session_storage = {
 }
 
 
-def controls_draw():
+def interface_draw():
+    screen.blit(pygame.image.load(map_api_file), (0, 0))
     # Строка полного адреса
     pygame.draw.rect(screen, (255, 255, 255), (15, 10, 382, 32), 0)
     if session_storage['full_address']:
@@ -59,7 +60,6 @@ def update_map():
     response = requests.get(map_api_url, params=map_api_params)
     with open(map_api_file, 'wb') as file:
         file.write(response.content)
-    screen.blit(pygame.image.load(map_api_file), (0, 0))
 
 
 def change_spn(change_type):
@@ -191,7 +191,7 @@ while running:
             elif 15 <= mouse_pos[0] <= 45 and 47 <= mouse_pos[1] <= 77:
                 session_storage['show_postal_code'] = not session_storage['show_postal_code']
     # Отрисовка интерфейса
-    controls_draw()
+    interface_draw()
     pygame.display.flip()
 pygame.quit()
 os.remove(map_api_file)
