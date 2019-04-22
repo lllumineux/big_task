@@ -12,6 +12,8 @@ map_api_params = {
 }
 map_api_file = 'map.png'
 session_storage = {
+    'show_postal_code': False,
+    'postal_code': '',
     'text': '',
     'full_address': ''
 }
@@ -25,6 +27,15 @@ def controls_draw():
             session_storage['full_address'], 1, (150, 150, 150)
         )
         screen.blit(address_text, (25, 21))
+    # Кнопка включения показа почтового индекса
+    pygame.draw.circle(screen, (255, 255, 255), (30, 62), 15)
+    if session_storage['show_postal_code']:
+        pygame.draw.circle(screen, (255, 64, 64), (30, 62), 7)
+        pygame.draw.rect(screen, (255, 255, 255), (55, 49, 200, 26), 0)
+        post_index_text = pygame.font.Font(None, 18).render(
+            session_storage['postal_code'], 1, (150, 150, 150)
+        )
+        screen.blit(post_index_text, (58, 58))
     # Кнопка сброса
     pygame.draw.circle(screen, (255, 255, 255), (424, 26), 16)
     pygame.draw.circle(screen, (255, 64, 64), (424, 26), 16, 2)
@@ -94,6 +105,9 @@ def add_point():
     session_storage['full_address'] = get_info_by_name(
         session_storage['text'], 'full_address'
     )
+    session_storage['postal_code'] = get_info_by_name(
+        session_storage['text'], 'post_index'
+    )
     col = 'bl'
     map_api_params['pt'] = '{},pm2{}m'.format(coords, col)
     map_api_params['ll'] = coords
@@ -105,6 +119,7 @@ def del_point():
         del map_api_params['pt']
         session_storage['text'] = ''
     session_storage['full_address'] = ''
+    session_storage['postal_code'] = ''
     update_map()
 
 
@@ -121,9 +136,14 @@ def get_info_by_name(obj_address, info_type):
 
         if info_type == 'pos':
             return geo_obj['Point']['pos'].replace(' ', ',')
-
         elif info_type == 'full_address':
             return geo_obj['metaDataProperty']['GeocoderMetaData']['text']
+        elif info_type == 'post_index':
+            try:
+                return geo_obj['metaDataProperty']['GeocoderMetaData']['AddressDetails']['Country']['AdministrativeArea']['SubAdministrativeArea']['Locality']['Thoroughfare']['Premise']['PostalCode']['PostalCodeNumber']
+            except Exception:
+                session_storage['show_postal_code'] = False
+                return ''
     return None
 
 
@@ -168,6 +188,8 @@ while running:
             mouse_pos = pygame.mouse.get_pos()
             if 408 <= mouse_pos[0] <= 440 and 10 <= mouse_pos[1] <= 42:
                 del_point()
+            elif 15 <= mouse_pos[0] <= 45 and 47 <= mouse_pos[1] <= 77:
+                session_storage['show_postal_code'] = not session_storage['show_postal_code']
     # Отрисовка интерфейса
     controls_draw()
     pygame.display.flip()
