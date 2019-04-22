@@ -20,7 +20,8 @@ def update_map():
 
 
 def change_spn(change_type):
-    spn, spn_num = map_api_params['spn'], float(map_api_params['spn'].split(',')[0])
+    spn = map_api_params['spn']
+    spn_num = float(map_api_params['spn'].split(',')[0])
     if change_type == '+':
         if spn_num > 0.01:
             spn = ','.join([str(spn_num - 0.01)] * 2)
@@ -28,13 +29,12 @@ def change_spn(change_type):
         if spn_num < 10:
             spn = ','.join([str(spn_num + 0.01)] * 2)
     map_api_params['spn'] = spn
-    update_map()
 
 
 def change_ll(change_type):
     spn_num = float(map_api_params['spn'].split(',')[0])
-    ll = map_api_params['ll']
     ll_nums = [float(num) for num in map_api_params['ll'].split(',')]
+
     if change_type == 'up':
         ll_nums[1] += 0.5 * spn_num
     elif change_type == 'right':
@@ -45,7 +45,13 @@ def change_ll(change_type):
         ll_nums[0] -= 0.5 * spn_num
     ll = ','.join([str(num) for num in ll_nums])
     map_api_params['ll'] = ll
-    update_map()
+
+
+def change_l():
+    l = map_api_params['l']
+    type_list = ['map', 'sat', 'sat,skl']
+    type_index = type_list.index(l)
+    map_api_params['l'] = type_list[(type_index + 1) % 3]
 
 
 pygame.init()
@@ -59,10 +65,12 @@ while running:
         if event.type == pygame.QUIT:
             running = False
         elif event.type == pygame.KEYDOWN:
+            # Изменение размера
             if event.key == pygame.K_PAGEUP:
                 change_spn('+')
             elif event.key == pygame.K_PAGEDOWN:
                 change_spn('-')
+            # Изменение положения
             elif event.key == pygame.K_UP:
                 change_ll('up')
             elif event.key == pygame.K_RIGHT:
@@ -71,6 +79,10 @@ while running:
                 change_ll('down')
             elif event.key == pygame.K_LEFT:
                 change_ll('left')
+            # Изменение типа
+            elif event.key == pygame.K_t:
+                change_l()
+            update_map()
     pygame.display.flip()
 pygame.quit()
 os.remove(map_api_file)
