@@ -17,6 +17,14 @@ session_storage = {
 
 
 def controls_draw():
+    # Кнопка сброса
+    pygame.draw.circle(screen, (255, 255, 255), (423, 27), 18)
+    pygame.draw.circle(screen, (255, 64, 64), (422, 28), 18, 2)
+    reset_text = pygame.font.Font(None, 20).render(
+        'res', 1, (255, 64, 64)
+    )
+    screen.blit(reset_text, (412, 22))
+    # Поисковая строка
     pygame.draw.rect(screen, (255, 255, 255), (15, 400, 420, 40), 0)
     if session_storage['text']:
         sign = pygame.font.Font(None, 22).render(
@@ -73,11 +81,17 @@ def change_l():
     update_map()
 
 
-def search():
+def add_point():
     coords = get_coord_by_name(session_storage['text'])
     col = 'bl'
     map_api_params['pt'] = '{},pm2{}m'.format(coords, col)
     map_api_params['ll'] = coords
+    update_map()
+
+
+def del_point():
+    if map_api_params['pt']:
+        del map_api_params['pt']
     update_map()
 
 
@@ -116,7 +130,7 @@ while running:
                 change_ll('down')
             elif event.key == pygame.K_LEFT:
                 change_ll('left')
-            # Изменение типа
+            # Изменение типа карты
             elif event.key == pygame.K_F1:
                 change_l()
             # Работа с поисковой строкой
@@ -126,7 +140,12 @@ while running:
             elif event.key == 8 and len(session_storage['text']) > 0:
                 session_storage['text'] = session_storage['text'][:-1:]
             elif event.key == 13:
-                search()
+                add_point()
+        # Работа с кнопкой res
+        elif event.type == pygame.MOUSEBUTTONDOWN:
+            mouse_pos = pygame.mouse.get_pos()
+            if 405 <= mouse_pos[0] <= 445 and 9 <= mouse_pos[1] <= 45:
+                del_point()
     # Отрисовка интерфейса
     controls_draw()
     pygame.display.flip()
