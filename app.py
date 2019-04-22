@@ -1,21 +1,23 @@
+import math
 import os
 import pygame
 import requests
 
 rus_alphabet = [let for let in 'йцукенгшщзхъфывапролджэячсмитьбюЙЦУКЕНГШЩЗХЪФЫВАПРОЛДЖЭЯЧСМИТЬБЮ1234567890,.']
 map_api_url = 'http://static-maps.yandex.ru/1.x/'
+map_api_file = 'map.png'
 map_api_params = {
     'll': '37.620070,55.753630',
     'spn': '0.01,0.01',
     'size': '450,450',
     'l': 'map'
 }
-map_api_file = 'map.png'
 session_storage = {
     'show_postal_code': False,
     'postal_code': '',
     'text': '',
-    'full_address': ''
+    'full_address': '',
+    'organisation': ''
 }
 
 
@@ -37,6 +39,12 @@ def interface_draw():
             session_storage['postal_code'], 1, (150, 150, 150)
         )
         screen.blit(post_index_text, (58, 58))
+    # Форма показа организации
+    pygame.draw.rect(screen, (255, 255, 255), (255, 49, 142, 26), 0)
+    oranisation_text = pygame.font.Font(None, 15).render(
+        session_storage['organisation'], 1, (150, 150, 150)
+    )
+    screen.blit(oranisation_text, (260, 58))
     # Кнопка сброса
     pygame.draw.circle(screen, (255, 255, 255), (424, 26), 16)
     pygame.draw.circle(screen, (255, 64, 64), (424, 26), 16, 2)
@@ -66,11 +74,11 @@ def change_spn(change_type):
     spn = map_api_params['spn']
     spn_num = float(map_api_params['spn'].split(',')[0])
     if change_type == '+':
-        if spn_num > 0.01:
-            spn = ','.join([str(spn_num - 0.01)] * 2)
+        if spn_num > 0.005:
+            spn = ','.join([str(spn_num - 0.005)] * 2)
     elif change_type == '-':
         if spn_num < 10:
-            spn = ','.join([str(spn_num + 0.01)] * 2)
+            spn = ','.join([str(spn_num + 0.005)] * 2)
     map_api_params['spn'] = spn
     update_map()
 
@@ -100,17 +108,17 @@ def change_l():
     update_map()
 
 
-def add_point():
-    coords = get_info_by_name(session_storage['text'], 'pos')
+def add_point(coord, new_cord=True):
     session_storage['full_address'] = get_info_by_name(
-        session_storage['text'], 'full_address'
+        session_storage['text'] if session_storage['text'] else coord, 'full_address'
     )
     session_storage['postal_code'] = get_info_by_name(
-        session_storage['text'], 'post_index'
+        session_storage['text'] if session_storage['text'] else coord, 'post_index'
     )
     col = 'bl'
-    map_api_params['pt'] = '{},pm2{}m'.format(coords, col)
-    map_api_params['ll'] = coords
+    map_api_params['pt'] = '{},pm2{}m'.format(coord, col)
+    if new_cord:
+        map_api_params['ll'] = coord
     update_map()
 
 
@@ -145,6 +153,34 @@ def get_info_by_name(obj_address, info_type):
                 session_storage['show_postal_code'] = False
                 return ''
     return None
+
+
+def get_coords_by_click(pos):
+    ll = [float(num) for num in map_api_params['ll'].split(',')]
+    spn = [float(num) for num in map_api_params['spn'].split(',')]
+    size = [int(num) for num in map_api_params['size'].split(',')]
+    one_px_spn = float(spn[0] / size[0])
+    top_left_ll = ll[0] - one_px_spn * 225, ll[1] + one_px_spn * 225
+    new_ll = top_left_ll[0] + one_px_spn * pos[0], top_left_ll[1] - one_px_spn * pos[1]
+    return ','.join([str(num) for num in new_ll])
+
+
+def get_org(coord):
+    search_api_server = 'https://search-maps.yandex.ru/v1/'
+    search_api_key = 'dda3ddba-c9ea-4ead-9010-f43fbc15c6e3'
+    search_params = {
+        'apikey': search_api_key,
+        'lang': 'ru_RU',
+        'll': coord,
+        'type': 'biz',
+        'spn': '0.001,0.001'
+    }
+    search_res = requests.get(search_api_server, params=search_params)
+    search_json_res = search_res.json()
+    try:
+        session_storage['organisation'] = search_json_res['features'][0]['properties']['CompanyMetaData']['name']
+    except Exception:
+        session_storage['organisation'] = ''
 
 
 pygame.init()
@@ -182,14 +218,22 @@ while running:
             elif event.key == 8 and len(session_storage['text']) > 0:
                 session_storage['text'] = session_storage['text'][:-1:]
             elif event.key == 13:
-                add_point()
+                add_point(get_info_by_name(session_storage['text'], 'pos'))
         # Работа с кнопкой res
         elif event.type == pygame.MOUSEBUTTONDOWN:
             mouse_pos = pygame.mouse.get_pos()
-            if 408 <= mouse_pos[0] <= 440 and 10 <= mouse_pos[1] <= 42:
-                del_point()
-            elif 15 <= mouse_pos[0] <= 45 and 47 <= mouse_pos[1] <= 77:
-                session_storage['show_postal_code'] = not session_storage['show_postal_code']
+            if event.button == 1:
+                if 408 <= mouse_pos[0] <= 440 and 10 <= mouse_pos[1] <= 42:
+                    del_point()
+                elif 15 <= mouse_pos[0] <= 45 and 47 <= mouse_pos[1] <= 77:
+                    session_storage['show_postal_code'] = not session_storage['show_postal_code']
+                else:
+                    if 'pt' in map_api_params.keys():
+                        del_point()
+                    add_point(get_coords_by_click(mouse_pos), new_cord=False)
+                    update_map()
+            elif event.button == 3:
+                get_org(get_coords_by_click(mouse_pos))
     # Отрисовка интерфейса
     interface_draw()
     pygame.display.flip()
