@@ -12,28 +12,36 @@ map_api_params = {
 }
 map_api_file = 'map.png'
 session_storage = {
-    'text': ''
+    'text': '',
+    'full_address': ''
 }
 
 
 def controls_draw():
+    # Строка полного адреса
+    pygame.draw.rect(screen, (255, 255, 255), (15, 10, 382, 32), 0)
+    if session_storage['full_address']:
+        address_text = pygame.font.Font(None, 15).render(
+            session_storage['full_address'], 1, (150, 150, 150)
+        )
+        screen.blit(address_text, (25, 21))
     # Кнопка сброса
-    pygame.draw.circle(screen, (255, 255, 255), (423, 27), 18)
-    pygame.draw.circle(screen, (255, 64, 64), (422, 28), 18, 2)
+    pygame.draw.circle(screen, (255, 255, 255), (424, 26), 16)
+    pygame.draw.circle(screen, (255, 64, 64), (424, 26), 16, 2)
     reset_text = pygame.font.Font(None, 20).render(
         'res', 1, (255, 64, 64)
     )
-    screen.blit(reset_text, (412, 22))
+    screen.blit(reset_text, (414, 20))
     # Поисковая строка
     pygame.draw.rect(screen, (255, 255, 255), (15, 400, 420, 40), 0)
     if session_storage['text']:
-        sign = pygame.font.Font(None, 22).render(
+        search_text = pygame.font.Font(None, 22).render(
             session_storage['text'], 1, (0, 0, 0)
         )
     else:
-        sign = pygame.font.Font(None, 22).render(
+        search_text = pygame.font.Font(None, 22).render(
             'Поиск...', 1, (200, 200, 200))
-    screen.blit(sign, (25, 412))
+    screen.blit(search_text, (25, 412))
 
 
 def update_map():
@@ -82,7 +90,10 @@ def change_l():
 
 
 def add_point():
-    coords = get_coord_by_name(session_storage['text'])
+    coords = get_info_by_name(session_storage['text'], 'pos')
+    session_storage['full_address'] = get_info_by_name(
+        session_storage['text'], 'full_address'
+    )
     col = 'bl'
     map_api_params['pt'] = '{},pm2{}m'.format(coords, col)
     map_api_params['ll'] = coords
@@ -90,19 +101,30 @@ def add_point():
 
 
 def del_point():
-    if map_api_params['pt']:
+    if 'pt' in map_api_params.keys():
         del map_api_params['pt']
+        session_storage['text'] = ''
+    session_storage['full_address'] = ''
     update_map()
 
 
-def get_coord_by_name(obj_name):
+def get_info_by_name(obj_address, info_type):
     geocoder_api_server = 'https://geocode-maps.yandex.ru/1.x/'
-    geocoder_params = {'geocode': obj_name, 'format': 'json'}
+    geocoder_params = {
+        'geocode': obj_address,
+        'format': 'json'
+    }
     res = requests.get(geocoder_api_server, params=geocoder_params)
     if res:
-        json_res = res.json()['response']['GeoObjectCollection']
-        geo_obj = json_res['featureMember'][0]['GeoObject']
-        return geo_obj['Point']['pos'].replace(' ', ',')
+        json_res = res.json()
+        geo_obj = json_res['response']['GeoObjectCollection']['featureMember'][0]['GeoObject']
+
+        if info_type == 'pos':
+            return geo_obj['Point']['pos'].replace(' ', ',')
+
+        elif info_type == 'full_address':
+            return geo_obj['metaDataProperty']['GeocoderMetaData']['text']
+    return None
 
 
 pygame.init()
@@ -144,7 +166,7 @@ while running:
         # Работа с кнопкой res
         elif event.type == pygame.MOUSEBUTTONDOWN:
             mouse_pos = pygame.mouse.get_pos()
-            if 405 <= mouse_pos[0] <= 445 and 9 <= mouse_pos[1] <= 45:
+            if 408 <= mouse_pos[0] <= 440 and 10 <= mouse_pos[1] <= 42:
                 del_point()
     # Отрисовка интерфейса
     controls_draw()
