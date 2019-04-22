@@ -234,6 +234,7 @@ while running:
                     update_map()
             elif event.button == 3:
                 get_org(get_coords_by_click(mouse_pos))
+                
     # Отрисовка интерфейса
     interface_draw()
     pygame.display.flip()
